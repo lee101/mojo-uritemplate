@@ -78,12 +78,12 @@ Python value serialization, ctypes, native expansion, and UTF-8 decoding.
 
 | case | mojo-uritemplate | uritemplate 4.2.0 | relative |
 | --- | ---: | ---: | ---: |
-| API URL, scalar + list | 55.0 µs | 45.5 µs | 1.21x slower |
-| percent-encode 64 KiB | 315.4 µs | 2.70 ms | 8.57x faster |
-| percent-encode 1 MiB | 10.17 ms | 50.51 ms | 4.97x faster |
-| explode 10k path segments | 8.25 ms | 38.64 ms | 4.69x faster |
-| explode 5k query pairs | 8.12 ms | 15.47 ms | 1.91x faster |
-| cached template, 100 scalars | 146.4 µs | 369.9 µs | 2.53x faster |
+| API URL, scalar + list | 13.0 µs | 44.4 µs | 3.42x faster |
+| percent-encode 64 KiB | 314.4 µs | 2.44 ms | 7.75x faster |
+| percent-encode 1 MiB | 8.26 ms | 48.17 ms | 5.83x faster |
+| explode 10k path segments | 4.27 ms | 23.67 ms | 5.54x faster |
+| explode 5k query pairs | 4.14 ms | 16.15 ms | 3.90x faster |
+| cached template, 100 scalars | 109.1 µs | 383.7 µs | 3.52x faster |
 
 These are the complete benchmark cases, not selected wins. The smallest case
 still includes the fixed FFI boundary; the larger cases show the benefit of
@@ -91,9 +91,11 @@ performing byte classification, percent encoding, and joining in one native
 pass.
 
 The native byte classification and bounded-copy loops use SIMD with scalar
-tails. Expansion remains serial because values produce variable-length output,
-so parallel writing would require an additional count and prefix-offset pass;
-the measured workloads do not repay that overhead.
+tails. The convenience API keeps a bounded cache of parsed template metadata,
+and the wire encoder specializes exact built-in scalar and mapping types while
+retaining generic fallbacks. Expansion remains serial because values produce
+variable-length output, so parallel writing would require an additional count
+and prefix-offset pass; the measured workloads do not repay that overhead.
 
 There is intentionally no GPU path. URI expansion is branch-heavy byte
 classification and copying with essentially no floating-point work, well below

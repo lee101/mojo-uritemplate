@@ -86,6 +86,25 @@ def encode_values(values: collections.abc.Mapping[str, Any]) -> bytearray:
         if value is None:
             append(0)
             continue
+        value_type = type(value)
+        if value_type is str:
+            append(1 if value else 7)
+            data = value.encode()
+            extend(pack(len(data)))
+            extend(data)
+            continue
+        if value_type is bytes:
+            append(5 if value else 6)
+            data = value.decode().encode()
+            extend(pack(len(data)))
+            extend(data)
+            continue
+        if value_type is int or value_type is float or value_type is bool:
+            append(1 if value else 4)
+            data = str(value).encode()
+            extend(pack(len(data)))
+            extend(data)
+            continue
         if isinstance(value, (list, tuple)):
             pairs = _is_pairs(value)
             if not pairs:
@@ -116,7 +135,12 @@ def encode_values(values: collections.abc.Mapping[str, Any]) -> bytearray:
             append(3)
             extend(pack(len(items)))
             for item_key, item_value in items:
-                if isinstance(item_key, bytes):
+                item_key_type = type(item_key)
+                if item_key_type is bytes:
+                    item_key_data = item_key
+                elif item_key_type is str:
+                    item_key_data = item_key.encode()
+                elif isinstance(item_key, bytes):
                     item_key_data = item_key
                 elif isinstance(item_key, str):
                     item_key_data = item_key.encode()
@@ -126,7 +150,12 @@ def encode_values(values: collections.abc.Mapping[str, Any]) -> bytearray:
                 extend(item_key_data)
                 append(item_value is None)
                 if item_value is not None:
-                    if isinstance(item_value, bytes):
+                    item_value_type = type(item_value)
+                    if item_value_type is bytes:
+                        item_data = item_value.decode().encode()
+                    elif item_value_type is str:
+                        item_data = item_value.encode()
+                    elif isinstance(item_value, bytes):
                         item_data = item_value.decode().encode()
                     elif isinstance(item_value, str):
                         item_data = item_value.encode()

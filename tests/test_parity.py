@@ -169,6 +169,28 @@ def test_kwargs_override_dictionary():
     )
 
 
+def test_cached_convenience_template_does_not_retain_values():
+    template = "{/owner}{?page}"
+    assert mojo.expand(template, owner="first", page=1) == "/first?page=1"
+    assert mojo.expand(template, owner="second", page=2) == "/second?page=2"
+
+
+@pytest.mark.parametrize("value", ["text", b"bytes", 0, 3, 0.0, 1.25, False, True])
+def test_builtin_scalar_wire_fast_paths_match_upstream(value):
+    assert mojo.expand("{x}", x=value) == upstream.expand("{x}", x=value)
+
+
+def test_builtin_mapping_wire_fast_path_and_subclass_fallbacks():
+    class Text(str):
+        pass
+
+    class Binary(bytes):
+        pass
+
+    values = {"x": {Text("text"): Binary(b"binary value")}}
+    assert mojo.expand("{x*}", values) == upstream.expand("{x*}", values)
+
+
 def test_template_protocol_and_metadata():
     template = mojo.URITemplate("/repos{/owner}{/repo}{?owner}")
     same = mojo.URITemplate(str(template))
